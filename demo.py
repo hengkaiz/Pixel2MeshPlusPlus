@@ -17,6 +17,8 @@ from modules.config import execute
 from utils.tools import construct_feed_dict, load_demo_image
 # from utils.visualize import plot_scatter
 
+from sklearn.preprocessing import MinMaxScaler
+
 def main(cfg):
     os.environ['CUDA_VISIBLE_DEVICES'] = str(0)
     # ---------------------------------------------------------------
@@ -95,25 +97,58 @@ def main(cfg):
     feed_dict.update({placeholders['labels']: np.zeros([10, 6])})
     feed_dict.update({placeholders['cameras']: cameras})
     stage1_out3 = sess.run(model1.output3, feed_dict=feed_dict)
-    
+
+    print('stage1out:', stage1_out3.shape)
+
+    v_min = np.array([stage1_out3[:, 0].min(), stage1_out3[:, 1].min(), stage1_out3[:, 2].min()])
+    v_max = np.array([stage1_out3[:, 0].max(), stage1_out3[:, 1].max(), stage1_out3[:, 2].max()])
+    print(v_min, v_max)
+
+    print('=> loading features')
+    # (3, 2466, 3)
+    loaded_features = np.loadtxt('features.txt')
+    index = 0
+    print('loaded features:', loaded_features.shape)
+    v = loaded_features
+
+    v_old_min = np.array([loaded_features[:, 0].min(), loaded_features[:, 1].min(), loaded_features[:, 2].min()])
+    v_old_max = np.array([loaded_features[:, 0].max(), loaded_features[:, 1].max(), loaded_features[:, 2].max()])
+
+    in_feature = ((v - v_old_min) * (v_max - v_min) / (v_old_max - v_old_min)) + v_min
+
+    # scaler = MinMaxScaler((v_min, v_max))
+    # in_feature = scaler.fit_transform(loaded_features[0])
+    print(in_feature.shape)
+    # in_feature = ((v - v.min()) * (v_max - v_min) / (v.max() - v.min())) + v_min
+
     print('=> start test stage 2')
-    feed_dict.update({placeholders['features']: stage1_out3})
-    vert, img_feat = sess.run([model2.output2l, model2.img_feat], feed_dict=feed_dict)
-    vert = np.hstack((np.full([vert.shape[0],1], 'v'), vert))
-    face = np.loadtxt('data/face3.obj', dtype='|S32')
-    mesh = np.vstack((vert, face))
+    feed_dict.update({placeholders['features']: in_feature})
+    pred_vert, img_feat = sess.run([model2.output2l, model2.img_feat], feed_dict=feed_dict)
 
-    pred_path = 'data/demo/predict.obj'
-    np.savetxt(pred_path, mesh, fmt='%s', delimiter=' ')
+    pred_mesh = np.hstack((np.full([pred_vert.shape[0],1], 'v'), pred_vert))
 
-    img_feat_json = {}
-    classes = ['x0', 'x1', 'x2']
+    pred_path = 'data/demo/new_prediction.obj'
+    np.savetxt(pred_path, pred_mesh, fmt='%s', delimiter=' ')
+    print('=> save to {}'.format(pred_path))
 
-    for i in range(len(placeholders['img_feat'])):
-      img_feat_json[classes[i]] = str(img_feat[i])
+    # v = in_feature
+    # v_new_min = np.array([v[:, 0].min(), v[:, 1].min(), v[:, 2].min()])
+    # v_new_max = np.array([v[:, 0].max(), v[:, 1].max(), v[:, 2].max()])
+    # rescaled_back = in_feature = ((v - v_new_min) * (v_old_max - v_old_min) / (v_new_max - v_new_min)) + v_old_min
 
-    with open('data/demo/img_feat.json', 'w') as f:
-      json.dump(img_feat_json, f)
+    scaled_mesh = np.hstack((np.full([in_feature.shape[0],1], 'v'), in_feature))
+
+    pred_path = 'data/demo/rescaled_original.obj'
+    np.savetxt(pred_path, scaled_mesh, fmt='%s', delimiter=' ')
+
+    # img_feat_json = {}
+    # classes = ['x0', 'x1', 'x2']
+
+    # for i in range(len(placeholders['img_feat'])):
+    #   img_feat_json[classes[i]] = str(img_feat[i])
+
+    # with open('data/demo/img_feat.json', 'w') as f:
+    #   json.dump(img_feat_json, f)
 
     print('=> save to {}'.format(pred_path))
 
