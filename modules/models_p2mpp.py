@@ -99,6 +99,7 @@ class MeshNet(Model):
         self.proj2 = None
         self.drb1 = None
         self.drb2 = None
+        self.img_feat = None
         self.build()
 
     def loadcnn(self, sess=None, ckpt_path=None, step=None):
@@ -212,3 +213,5 @@ class MeshNet(Model):
 
         self.summary_loss = tf.summary.scalar('loss', self.loss)
         self.merged_summary_op = tf.summary.merge_all()
+
+        self.img_feat = self.placeholders['img_feat']
