@@ -8,6 +8,7 @@ import pprint
 import pickle
 import shutil
 import os
+import json
 
 from modules.models_mvp2m import MeshNetMVP2M as MVP2MNet
 from modules.models_p2mpp import MeshNet as P2MPPNet
@@ -15,7 +16,6 @@ from modules.config import execute
 # from utils.dataloader import DataFetcher
 from utils.tools import construct_feed_dict, load_demo_image
 # from utils.visualize import plot_scatter
-
 
 def main(cfg):
     os.environ['CUDA_VISIBLE_DEVICES'] = str(0)
@@ -62,9 +62,9 @@ def main(cfg):
     model2 = P2MPPNet(placeholders, logging=True, args=cfg)
     # ---------------------------------------------------------------
     print('=> load data')
-    demo_img_list = ['data/demo/plane1.png',
-                     'data/demo/plane2.png',
-                     'data/demo/plane3.png']
+    demo_img_list = ['data/demo/item1.png',
+                     'data/demo/item2.png',
+                     'data/demo/item3.png']
     img_all_view = load_demo_image(demo_img_list)
     cameras = np.loadtxt('data/demo/cameras.txt')
     # data = DataFetcher(file_list=cfg.test_file_path, data_root=cfg.test_data_path, image_root=cfg.test_image_path, is_val=True)
@@ -98,13 +98,22 @@ def main(cfg):
     
     print('=> start test stage 2')
     feed_dict.update({placeholders['features']: stage1_out3})
-    vert = sess.run(model2.output2l, feed_dict=feed_dict)
+    vert, img_feat = sess.run([model2.output2l, model2.img_feat], feed_dict=feed_dict)
     vert = np.hstack((np.full([vert.shape[0],1], 'v'), vert))
     face = np.loadtxt('data/face3.obj', dtype='|S32')
     mesh = np.vstack((vert, face))
 
     pred_path = 'data/demo/predict.obj'
     np.savetxt(pred_path, mesh, fmt='%s', delimiter=' ')
+
+    img_feat_json = {}
+    classes = ['x0', 'x1', 'x2']
+
+    for i in range(len(placeholders['img_feat'])):
+      img_feat_json[classes[i]] = str(img_feat[i])
+
+    with open('data/demo/img_feat.json', 'w') as f:
+      json.dump(img_feat_json, f)
 
     print('=> save to {}'.format(pred_path))
 
