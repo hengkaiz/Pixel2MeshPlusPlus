@@ -64,9 +64,9 @@ def main(cfg):
     model2 = P2MPPNet(placeholders, logging=True, args=cfg)
     # ---------------------------------------------------------------
     print('=> load data')
-    demo_img_list = ['data/demo/item1.png',
-                     'data/demo/item2.png',
-                     'data/demo/item3.png']
+    demo_img_list = ['data/demo/plane1.png',
+                     'data/demo/plane2.png',
+                     'data/demo/plane3.png']
     img_all_view = load_demo_image(demo_img_list)
     cameras = np.loadtxt('data/demo/cameras.txt')
     # data = DataFetcher(file_list=cfg.test_file_path, data_root=cfg.test_data_path, image_root=cfg.test_image_path, is_val=True)
@@ -106,23 +106,23 @@ def main(cfg):
 
     print('=> loading features')
     # (3, 2466, 3)
-    loaded_features = np.loadtxt('features.txt')
-    index = 0
-    print('loaded features:', loaded_features.shape)
-    v = loaded_features
+    # loaded_features = np.loadtxt('features.txt')
+    # index = 0
+    # print('loaded features:', loaded_features.shape)
+    # v = loaded_features
 
-    v_old_min = np.array([loaded_features[:, 0].min(), loaded_features[:, 1].min(), loaded_features[:, 2].min()])
-    v_old_max = np.array([loaded_features[:, 0].max(), loaded_features[:, 1].max(), loaded_features[:, 2].max()])
+    # v_old_min = np.array([loaded_features[:, 0].min(), loaded_features[:, 1].min(), loaded_features[:, 2].min()])
+    # v_old_max = np.array([loaded_features[:, 0].max(), loaded_features[:, 1].max(), loaded_features[:, 2].max()])
 
-    in_feature = ((v - v_old_min) * (v_max - v_min) / (v_old_max - v_old_min)) + v_min
+    # in_feature = ((v - v_old_min) * (v_max - v_min) / (v_old_max - v_old_min)) + v_min
 
-    # scaler = MinMaxScaler((v_min, v_max))
-    # in_feature = scaler.fit_transform(loaded_features[0])
-    print(in_feature.shape)
-    # in_feature = ((v - v.min()) * (v_max - v_min) / (v.max() - v.min())) + v_min
+    # # scaler = MinMaxScaler((v_min, v_max))
+    # # in_feature = scaler.fit_transform(loaded_features[0])
+    # print(in_feature.shape)
+    # # in_feature = ((v - v.min()) * (v_max - v_min) / (v.max() - v.min())) + v_min
 
     print('=> start test stage 2')
-    feed_dict.update({placeholders['features']: in_feature})
+    feed_dict.update({placeholders['features']: stage1_out3})
     pred_vert, img_feat = sess.run([model2.output2l, model2.img_feat], feed_dict=feed_dict)
 
     pred_mesh = np.hstack((np.full([pred_vert.shape[0],1], 'v'), pred_vert))
@@ -136,10 +136,10 @@ def main(cfg):
     # v_new_max = np.array([v[:, 0].max(), v[:, 1].max(), v[:, 2].max()])
     # rescaled_back = in_feature = ((v - v_new_min) * (v_old_max - v_old_min) / (v_new_max - v_new_min)) + v_old_min
 
-    scaled_mesh = np.hstack((np.full([in_feature.shape[0],1], 'v'), in_feature))
+    # scaled_mesh = np.hstack((np.full([in_feature.shape[0],1], 'v'), in_feature))
 
-    pred_path = 'data/demo/rescaled_original.obj'
-    np.savetxt(pred_path, scaled_mesh, fmt='%s', delimiter=' ')
+    # pred_path = 'data/demo/rescaled_original.obj'
+    # np.savetxt(pred_path, scaled_mesh, fmt='%s', delimiter=' ')
 
     # img_feat_json = {}
     # classes = ['x0', 'x1', 'x2']
