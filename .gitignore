@@ -4,3 +4,4 @@ logs/*
 ckpt/*
 **__pycache__
 tmp
+external/*
